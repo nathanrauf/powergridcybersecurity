@@ -7,10 +7,21 @@
 extern IedModel iedModel;
 
 static int running = 0;
+static IedServer iedServer = NULL;
 
+/*
 void sigint_handler(int signalId)
-{
+
 	running = 0;
+}
+*/
+
+static void connectionHandler(IedServer self, ClientConnection connection,
+                              bool connected, void *parameter) {
+  if (connected)
+    printf("Connection opened\n");
+  else
+    printf("Connection closed\n");
 }
 
 int main(int argc, char** argv) {
@@ -22,7 +33,10 @@ int main(int argc, char** argv) {
     	}
  
 	//Create server
-	IedServer iedServer = IedServer_create(&iedModel);
+	iedServer = IedServer_create(&iedModel);
+
+	IedServer_setConnectionIndicationHandler(
+      	iedServer, (IedConnectionIndicationHandler)connectionHandler, NULL);
  
 	//Start server
 	IedServer_start(iedServer, -1);
