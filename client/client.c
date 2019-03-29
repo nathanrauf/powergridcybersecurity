@@ -49,43 +49,44 @@ int writeFile () {
     printf("Error reading from server_to_client.txt. \n");
     return 0;
   }
-  
+
   return 1;
 }
 
 
 int main (int argc, char ** argv) {
-	
+
 	char * hostname;
 	int tcpPort = 102;
 	int running = 1;
-	
+
 	IedClientError error;
 	IedConnection connection = IedConnection_create();
-	
+
 	// Get the host IP from the user
-	if (argc > 1) 
+	if (argc > 1)
 		hostname = argv[1];
 	else
 		printf("Enter the host name and try again.");
-		
+
 	// Get port from the user
 	if (argc > 2) {
 		tcpPort = atoi(argv[2]);
 	}
-		
+
 	IedConnection_connect(connection, &error, hostname, tcpPort);
-	
+
 	if (error == IED_ERROR_OK) {
-		
+
+    printf("\nClient started..");
+    printf("Waiting for server data..\n");
 		// Main loop
 		while (running) {
-			printf("\nClient is running!");
 			Thread_sleep(1000);
 		}
-		
-	} else 
+
+	} else
 		printf("Connection failed.");
-		
-	IedConnection_destroy(connection);	
+
+	IedConnection_destroy(connection);
 }
