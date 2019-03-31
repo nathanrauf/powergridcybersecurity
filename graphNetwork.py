@@ -4,8 +4,8 @@ from collections import Counter
 #from prettytable import PrettyTable
 import plotly
 import sys
-reload(sys)
-sys.setdefaultencoding('utf-8')
+# reload(sys)
+# sys.setdefaultencoding('utf-8')
 
 #Read packet data from PCap file
 packets = rdpcap('example.pcap')
