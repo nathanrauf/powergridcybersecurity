@@ -1,5 +1,6 @@
 #include "iec61850_server.h"
 #include "static_model.h"
+#include "hal_thread.h"
 #include <stdlib.h>
 #include <stdio.h>
 
@@ -9,8 +10,11 @@ extern IedModel iedModel;
 static int running = 0;
 static IedServer iedServer = NULL;
 
+#define NUM_TO_SERVER 2
+#define NUM_TO_CLIENT 2
 
-static float data[2];
+static float data_to_server[NUM_TO_CLIENT];
+static float data_to_client[NUM_TO_SERVER];
 
 //Read from the data file
 void readFile(){
@@ -18,37 +22,37 @@ void readFile(){
 
 	printf("Reading data file\n");
 	
-	file = fopen("dataFile.txt", "r");
+	file = fopen("server_to_client.txt", "r");
 	
 	if(file == NULL){
 		printf("Error reading from file");
 		exit(1);
 	}
 	
-	fscanf(file, "%f", &data[0]);
+	fscanf(file, "%f", &data_to_client[0]);
 
-	fscanf(file, "%f", &data[1]);
+	fscanf(file, "%f", &data_to_client[1]);
 
-	printf("%f, %f\n", data[0], data[1]);
+//	printf("%f, %f\n", data[0], data[1]);
 
 	fclose(file);
 }
 
 //Writes data to file
 void writeFile(){
-	File *file;
+	FILE *file;
 
-	printf("Writing to data file"):
+	printf("Writing to data file");
 	
-	file = fopen("writeDataFile.txt", "w");
+	file = fopen("client_to_server.txt", "w");
 
 	if(file == NULL){
-		printf("Error occured while writing to file"):
+		printf("Error occured while writing to file");
 		exit(1);
 	}
 
-	fprintf(file, "%f", data[0]);
-	fprintf(file, "%f", data[1]);
+	fprintf(file, "%f", data_to_server[0]);
+	fprintf(file, "%f", data_to_server[1]);
 
 	fclose(file);
 }
@@ -76,43 +80,46 @@ int main(int argc, char** argv) {
       	iedServer, (IedConnectionIndicationHandler)connectionHandler, NULL);
 
 	//Start server
-	IedServer_start(iedServer, -1);
+	IedServer_start(iedServer, tcpPort);
 
 	if (!IedServer_isRunning(iedServer)) {
 		printf("Starting server failed! Exit.\n");
 		IedServer_destroy(iedServer);
 		exit(-1);
 	}
-	else{
+	else {
 		printf("Server is starting.\n");
+		running = 1;
+		IedServer_setWriteAccessPolicy(iedServer, IEC61850_FC_DC, ACCESS_POLICY_ALLOW);
+		IedServer_setWriteAccessPolicy(iedServer, IEC61850_FC_CF, ACCESS_POLICY_ALLOW);
+		IedServer_setWriteAccessPolicy(iedServer, IEC61850_FC_SV, ACCESS_POLICY_ALLOW);
+		IedServer_setWriteAccessPolicy(iedServer, IEC61850_FC_SE, ACCESS_POLICY_ALLOW);
+		IedServer_setWriteAccessPolicy(iedServer, IEC61850_FC_SP, ACCESS_POLICY_ALLOW);
 	}
 
-	running = 1;
-<<<<<<< HEAD
-
-	
- 
 	//Main thread for server to run
 	while (running) {
-	    Thread_sleep(5000);
-	    readFile();
-	    Thread_sleep(10000);
-	    writeFile();
-=======
-  char msg = [150];
-	//Main thread for server to run
-	while (running) {
+	    
+		IedServer_lockDataModel(iedServer);
+		
+		// Read the data from control center
+		readFile();
 
-      printf("Enter a message:\n");
-      gets( str );
-      printf("You entetered: ");
-      puts( str );
-	    Thread_sleep(1);
->>>>>>> 35b802070a24e92c1901c0e8f07df4cc0cf44f37
+		// Update the models
+		IedServer_updateFloatAttributeValue(iedServer, IEDMODEL_CTRL_GGIO1_AnOut1_subVal_f, data_to_client[0]);
+		IedServer_updateFloatAttributeValue(iedServer, IEDMODEL_CTRL_GGIO2_AnOut1_subVal_f, data_to_client[1]);
+
+		// Get the data from the client
+		data_to_server[0] = IedServer_getFloatAttributeValue(iedServer, IEDMODEL_CTRL_GGIO3_AnOut1_subVal_f);
+		data_to_server[0] = IedServer_getFloatAttributeValue(iedServer, IEDMODEL_CTRL_GGIO4_AnOut1_subVal_f);
+	    	writeFile();
+
+		IedServer_unlockDataModel(iedServer);
+
+		Thread_sleep(10000);
 	}
 
 	//Stops Server
 	IedServer_stop(iedServer);
-
 	IedServer_destroy(iedServer);
 }
