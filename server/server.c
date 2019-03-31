@@ -68,13 +68,13 @@ int main(int argc, char** argv) {
     	if (argc > 1) {
         	tcpPort = atoi(argv[1]);
     	}
- 
+
 	//Create server
 	iedServer = IedServer_create(&iedModel);
 
 	IedServer_setConnectionIndicationHandler(
       	iedServer, (IedConnectionIndicationHandler)connectionHandler, NULL);
- 
+
 	//Start server
 	IedServer_start(iedServer, -1);
 
@@ -88,6 +88,7 @@ int main(int argc, char** argv) {
 	}
 
 	running = 1;
+<<<<<<< HEAD
 
 	
  
@@ -97,10 +98,21 @@ int main(int argc, char** argv) {
 	    readFile();
 	    Thread_sleep(10000);
 	    writeFile();
+=======
+  char msg = [150];
+	//Main thread for server to run
+	while (running) {
+
+      printf("Enter a message:\n");
+      gets( str );
+      printf("You entetered: ");
+      puts( str );
+	    Thread_sleep(1);
+>>>>>>> 35b802070a24e92c1901c0e8f07df4cc0cf44f37
 	}
- 	
+
 	//Stops Server
 	IedServer_stop(iedServer);
- 
+
 	IedServer_destroy(iedServer);
-} 
+}
