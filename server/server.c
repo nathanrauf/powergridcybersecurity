@@ -9,13 +9,51 @@ extern IedModel iedModel;
 static int running = 0;
 static IedServer iedServer = NULL;
 
-/*
-void sigint_handler(int signalId)
 
-	running = 0;
+static float data[2];
+
+//Read from the data file
+void readFile(){
+	FILE *file;
+
+	printf("Reading data file\n");
+	
+	file = fopen("dataFile.txt", "r");
+	
+	if(file == NULL){
+		printf("Error reading from file");
+		exit(1);
+	}
+	
+	fscanf(file, "%f", &data[0]);
+
+	fscanf(file, "%f", &data[1]);
+
+	printf("%f, %f\n", data[0], data[1]);
+
+	fclose(file);
 }
-*/
 
+//Writes data to file
+void writeFile(){
+	File *file;
+
+	printf("Writing to data file"):
+	
+	file = fopen("writeDataFile.txt", "w");
+
+	if(file == NULL){
+		printf("Error occured while writing to file"):
+		exit(1);
+	}
+
+	fprintf(file, "%f", data[0]);
+	fprintf(file, "%f", data[1]);
+
+	fclose(file);
+}
+
+//Handles connections from client
 static void connectionHandler(IedServer self, ClientConnection connection,
                               bool connected, void *parameter) {
   if (connected)
@@ -25,7 +63,6 @@ static void connectionHandler(IedServer self, ClientConnection connection,
 }
 
 int main(int argc, char** argv) {
-
 	int tcpPort = 102;
 
     	if (argc > 1) {
@@ -51,10 +88,15 @@ int main(int argc, char** argv) {
 	}
 
 	running = 1;
+
+	
  
 	//Main thread for server to run
 	while (running) {
-	    Thread_sleep(1);
+	    Thread_sleep(5000);
+	    readFile();
+	    Thread_sleep(10000);
+	    writeFile();
 	}
  	
 	//Stops Server
