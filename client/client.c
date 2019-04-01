@@ -59,6 +59,15 @@ writeFile ()
 	return 1;
 }
 
+static void 
+connectionHandler(IedServer self, ClientConnection connection, bool connected, void *parameter) 
+{
+  if (connected)
+    printf("Connection opened\n");
+  else
+    printf("Connection closed\n");
+}
+
 
 int 
 main (int argc, char ** argv) 
@@ -70,6 +79,10 @@ main (int argc, char ** argv)
 
 	IedClientError error;
 	IedConnection connection = IedConnection_create();
+	//Create a local server
+	iedServer = IedServer_create(&iedModel);
+	IedServer_setConnectionIndicationHandler(iedServer, (IedConnectionIndicationHandler) connectionHandler, NULL);
+
 
 	// Get the host IP from the user
 	if (argc > 1)
@@ -107,6 +120,7 @@ main (int argc, char ** argv)
 			{
 				IedConnection_getServerDirectory(connection, &error, false);
 				
+				printf("\nGetting data from server.");
 				// Get the first value from the server application.
 				data_to_client[0] = IedConnection_readFloatValue(connection, &error, "PowGridSim_SS1CTRL/GGIO1.subVal.f", IEC61850_FC_SV);
 				if (error != IED_ERROR_OK) 
@@ -122,6 +136,8 @@ main (int argc, char ** argv)
 					printf("Error reading value from server.");
 					exit(1);
 				}
+				
+				printf("\nRecieved data from server.");
 				
 				// Write to the data buffer
 				if (writeFile() == 0) 
@@ -139,6 +155,8 @@ main (int argc, char ** argv)
 			// Begin data transmission
 			if (error == IED_ERROR_OK) 
 			{
+				printf("\nSending data to server.");
+				
 				// Read data from the control center
 				if (readFile() == 0) 
 				{
@@ -147,7 +165,7 @@ main (int argc, char ** argv)
 				}
 				
 				// Write the first value to the server IED model
-				IedConnection_writeFloatValue(con, &error, "PowGridSim_SS1CTRL/GGIO3.subVal.f", IEC61850_FC_SV, data_to_server[0]);
+				IedConnection_writeFloatValue(connection, &error, "PowGridSim_SS1CTRL/GGIO3.subVal.f", IEC61850_FC_SV, data_to_server[0]);
 				if (error != IED_ERROR_OK) 
 				{
 					printf("\nError writing first power generation value.");
@@ -155,12 +173,14 @@ main (int argc, char ** argv)
 				}
 				
 				// Write the second.
-				IedConnection_writeFloatValue(con, &error, "PowGridSim_SS1CTRL/GGIO4.subVal.f", IEC61850_FC_SV, data_to_server[1]);
+				IedConnection_writeFloatValue(connection, &error, "PowGridSim_SS1CTRL/GGIO4.subVal.f", IEC61850_FC_SV, data_to_server[1]);
 				if (error != IED_ERROR_OK) 
 				{
 					printf("\nError writing second power generation value.");
 					exit(1);
 				}
+				
+				printf("\nSent data to server.");
 				
 				IedServer_unlockDataModel(iedServer);
 			
