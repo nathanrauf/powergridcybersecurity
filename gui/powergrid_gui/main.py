@@ -1,5 +1,6 @@
 # The code for changing pages was derived from: http://stackoverflow.com/questions/7546050/switch-between-two-frames-in-tkinter
-# License: http://creativecommons.org/licenses/by-sa/3.0/   
+# License: http://creativecommons.org/licenses/by-sa/3.0/
+from tkinter import ttk
 
 import matplotlib
 matplotlib.use("TkAgg")
@@ -7,9 +8,8 @@ from matplotlib.backends.backend_tkagg import FigureCanvasTkAgg, NavigationToolb
 from matplotlib.figure import Figure
 import matplotlib.animation as animation
 from matplotlib import style
-
+import os
 import tkinter as tk
-from tkinter import ttk
 
 
 LARGE_FONT= ("Verdana", 12)
@@ -33,7 +33,15 @@ def animate(i):
     a.clear()
     a.plot(xList, yList)
 
-    
+def runFloodAttack():
+    from attacks import synflood
+
+
+
+def runMitmAttack():
+    from attacks import mitm
+
+
 class PowerGridGui(tk.Tk):
 
     def __init__(self, *args, **kwargs):
@@ -42,8 +50,8 @@ class PowerGridGui(tk.Tk):
 
         # tk.Tk.iconbitmap(self, default="clienticon.ico")
         tk.Tk.wm_title(self, "Power Grid Simulator")
-        
-        
+
+
         container = tk.Frame(self)
         container.pack(side="top", fill="both", expand = True)
         container.grid_rowconfigure(0, weight=1)
@@ -123,9 +131,13 @@ class GraphPage(tk.Frame):
         label = tk.Label(self, text="Graph Page!", font=LARGE_FONT)
         label.pack(pady=10,padx=10)
 
-        # button1 = ttk.Button(self, text="Back to Home",
-        #                     command=lambda: controller.show_frame(StartPage))
-        # button1.pack()
+        floodBtn = ttk.Button(self, text="Initiate SYN Flood Attack", command=runFloodAttack)
+
+        floodBtn.pack()
+
+        mitmAttackBtn = ttk.Button(self, text="Initiate MITM Attack", command=runMitmAttack)
+
+        mitmAttackBtn.pack()
 
         container_main = tk.Frame(self, background="#ffd3d3")
         container_graph_server = tk.Frame(self)
