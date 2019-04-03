@@ -87,10 +87,8 @@ while True:
                     #Get current value and add 1
                     count = srcCounts.get(str(pkt[IP].src))
                     count = count + 1
-                    print(str(count))
                     srcCounts.update({str(pkt[IP].src) : count })
                else:
-                    print('nope')
                     #Add to freq map
                     srcCounts.update({str(pkt[IP].src) : 1})
                     #Add to seen seenIPs
