@@ -10,3 +10,9 @@ If the binary is not included or you have made changes to client.c, then:
   3. cd ../..
   4. make
   5. sudo ./client.exe 192.168.1.xxx
+
+To find the IP, go to the server machine, open terminal and type 
+  1. ifconfig
+
+If you are using a VM, you may need to reconfigure its settings. Right click on the VM you are using, go to settings > network. 
+From here, there should be an option named "Attached to:". Change this to "Bridged Adapter" and you should be all set. 
