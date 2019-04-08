@@ -1,9 +1,10 @@
-LIBIEC_HOME=./libiec61850
+LIBIEC_HOME=./lib/libiec61850-1.1.1
 
 PROJECT_BINARY_NAME = server.exe
 PROJECT_SOURCES = server.c
 PROJECT_SOURCES += static_model.c
 
+PROJECT_ICD_FILE = OSU_SS1.scd
 
 include $(LIBIEC_HOME)/make/target_system.mk
 include $(LIBIEC_HOME)/make/stack_includes.mk
@@ -20,3 +21,4 @@ $(PROJECT_BINARY_NAME):	$(PROJECT_SOURCES) $(LIB_NAME)
 
 clean:
 	rm -f $(PROJECT_BINARY_NAME)
+
