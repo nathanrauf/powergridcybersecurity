@@ -4,7 +4,7 @@ PROJECT_BINARY_NAME = client.exe
 PROJECT_SOURCES = client.c
 PROJECT_SOURCES += static_model.c
 
-PROJECT_ICD_FILE = PowGridSim_model-gen-file.scd
+PROJECT_ICD_FILE = OSU_CC1.scd
 
 include $(LIBIEC_HOME)/make/target_system.mk
 include $(LIBIEC_HOME)/make/stack_includes.mk
