@@ -1,5 +1,6 @@
 # The code for changing pages was derived from: http://stackoverflow.com/questions/7546050/switch-between-two-frames-in-tkinter
 # License: http://creativecommons.org/licenses/by-sa/3.0/
+import tkinter as tk
 from tkinter import ttk
 import matplotlib
 matplotlib.use("TkAgg")
@@ -8,7 +9,6 @@ from matplotlib.figure import Figure
 import matplotlib.animation as animation
 from matplotlib import style
 import os
-import tkinter as tk
 from helper_functions import run_flood_attack, run_mitm_attack, start_client, start_server
 
 
@@ -17,6 +17,7 @@ style.use("ggplot")
 
 f = Figure(figsize=(5,5), dpi=100)
 a = f.add_subplot(111)
+
 
 def animate(i):
     pullData = open("./graph_data/data.txt","r").read()
@@ -49,7 +50,7 @@ class PowerGridGui(tk.Tk):
 
         self.frames = {}
 
-        for F in (StartPage, ClientPage, ServerPage, GraphPage):
+        for F in (StartPage, ClientServerUserInput, ClientPage, ServerPage, GraphPage):
             frame = F(container, self)
             self.frames[F] = frame
             frame.grid(row=0, column=0, sticky="nsew")
@@ -77,9 +78,9 @@ class StartPage(tk.Frame):
                             command=lambda: controller.show_frame(ServerPage))
         server_button.pack()
 
-        graph_page = ttk.Button(self, text="Graph Page",
-                            command=lambda: controller.show_frame(GraphPage))
-        graph_page.pack()
+        user_input_page = ttk.Button(self, text="Attacker Dashboard",
+                            command=lambda: controller.show_frame(ClientServerUserInput))
+        user_input_page.pack()
 
 
 class ClientPage(tk.Frame):
@@ -90,7 +91,7 @@ class ClientPage(tk.Frame):
         label.pack(pady=10,padx=10)
 
         start_client_button = ttk.Button(self, text="Start client",
-                            command = start_client)
+                            command=lambda: start_client("196.128.86.1"))
         start_client_button.pack()
 
 
@@ -107,12 +108,46 @@ class ServerPage(tk.Frame):
         label.pack(pady=10,padx=10)
 
         start_server_button = ttk.Button(self, text="Start server",
-                                command = start_server)
+                                command=lambda: start_server())
         start_server_button.pack()
 
         back_to_origin = ttk.Button(self, text="Back to Origin",
                             command=lambda: controller.show_frame(StartPage))
         back_to_origin.pack()
+
+
+class ClientServerUserInput(tk.Frame):
+    # need to error check
+
+    # client_ip_input = None
+    # server_ip_input = None
+
+    def __init__(self, parent, controller):
+        tk.Frame.__init__(self, parent)
+
+        text_box_client = tk.Text(self, height=2, width=10)
+        text_box_client.pack()
+
+        text_box_server = tk.Text(self, height=2, width=10)
+        text_box_server.pack()
+
+        self.client_ip_input = text_box_client
+        self.server_ip_input = text_box_server
+
+        buttonCommit = ttk.Button(self, text="Submit", 
+                            command=lambda: self.retrieve_input(controller))
+        buttonCommit.pack()
+
+        back_to_origin = ttk.Button(self, text="Back to Origin",
+                            command=lambda: controller.show_frame(StartPage))
+        back_to_origin.pack()
+
+    def retrieve_input(self,controller):
+        client_ip = self.client_ip_input.get("1.0","end-1c")
+        server_ip = self.server_ip_input.get("1.0","end-1c")
+        print(client_ip)
+        print(server_ip)
+        controller.show_frame(GraphPage)
 
 
 class GraphPage(tk.Frame):

@@ -9,9 +9,10 @@ def run_mitm_attack():
     # from attacks import mitm
     print("mitm attack")
 
-def start_client():
+def start_client(server_ip):
   print("starting client")
-  os.system('sudo ./client/client.exe')
+  command = 'sudo ./client/client.exe '  + server_ip
+  os.system(command)
 
 def start_server():
   print("starting server")
