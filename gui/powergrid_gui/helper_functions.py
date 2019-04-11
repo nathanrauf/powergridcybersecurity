@@ -11,10 +11,10 @@ def run_mitm_attack():
 
 def start_client():
   print("starting client")
-  os.system('sudo ./client.exe')
+  os.system('sudo ./client/client.exe')
 
 def start_server():
   print("starting server")
-  os.system('sudo ./server.exe')
+  os.system('sudo ./server/server.exe')
 
 
