@@ -1,7 +1,6 @@
 # The code for changing pages was derived from: http://stackoverflow.com/questions/7546050/switch-between-two-frames-in-tkinter
 # License: http://creativecommons.org/licenses/by-sa/3.0/
 from tkinter import ttk
-
 import matplotlib
 matplotlib.use("TkAgg")
 from matplotlib.backends.backend_tkagg import FigureCanvasTkAgg, NavigationToolbar2Tk
@@ -10,6 +9,7 @@ import matplotlib.animation as animation
 from matplotlib import style
 import os
 import tkinter as tk
+from helper_functions import run_flood_attack, run_mitm_attack, start_client, start_server
 
 
 LARGE_FONT= ("Verdana", 12)
@@ -17,7 +17,6 @@ style.use("ggplot")
 
 f = Figure(figsize=(5,5), dpi=100)
 a = f.add_subplot(111)
-
 
 def animate(i):
     pullData = open("./graph_data/data.txt","r").read()
@@ -33,14 +32,6 @@ def animate(i):
     a.clear()
     a.plot(xList, yList)
 
-def runFloodAttack():
-    from attacks import synflood
-
-
-
-def runMitmAttack():
-    from attacks import mitm
-
 
 class PowerGridGui(tk.Tk):
 
@@ -51,7 +42,6 @@ class PowerGridGui(tk.Tk):
         # tk.Tk.iconbitmap(self, default="clienticon.ico")
         tk.Tk.wm_title(self, "Power Grid Simulator")
 
-
         container = tk.Frame(self)
         container.pack(side="top", fill="both", expand = True)
         container.grid_rowconfigure(0, weight=1)
@@ -59,12 +49,12 @@ class PowerGridGui(tk.Tk):
 
         self.frames = {}
 
-        F = GraphPage
-        frame = F(container, self)
-        self.frames[F] = frame
-        frame.grid(row=0, column=0, sticky="nsew")
+        for F in (StartPage, ClientPage, ServerPage, GraphPage):
+            frame = F(container, self)
+            self.frames[F] = frame
+            frame.grid(row=0, column=0, sticky="nsew")
 
-        self.show_frame(GraphPage)
+        self.show_frame(StartPage)
 
     def show_frame(self, cont):
 
@@ -72,56 +62,57 @@ class PowerGridGui(tk.Tk):
         frame.tkraise()
 
         
-# class StartPage(tk.Frame):
+class StartPage(tk.Frame):
 
-#     def __init__(self, parent, controller):
-#         tk.Frame.__init__(self,parent)
-#         label = tk.Label(self, text="Start Page", font=LARGE_FONT)
-#         label.pack(pady=10,padx=10)
+    def __init__(self, parent, controller):
+        tk.Frame.__init__(self,parent)
+        label = tk.Label(self, text="Power Grid Management System", font=LARGE_FONT)
+        label.pack(pady=10,padx=10)
 
-#         button = ttk.Button(self, text="Visit Page 1",
-#                             command=lambda: controller.show_frame(PageOne))
-#         button.pack()
+        client_button = ttk.Button(self, text="Start Client (Substation)",
+                            command=lambda: controller.show_frame(ClientPage))
+        client_button.pack()
 
-#         button2 = ttk.Button(self, text="Visit Page 2",
-#                             command=lambda: controller.show_frame(PageTwo))
-#         button2.pack()
+        server_button = ttk.Button(self, text="Start Server (Control Center)",
+                            command=lambda: controller.show_frame(ServerPage))
+        server_button.pack()
 
-#         button3 = ttk.Button(self, text="Graph Page",
-#                             command=lambda: controller.show_frame(GraphPage))
-#         button3.pack()
-
-
-# class PageOne(tk.Frame):
-
-#     def __init__(self, parent, controller):
-#         tk.Frame.__init__(self, parent)
-#         label = tk.Label(self, text="Page One!!!", font=LARGE_FONT)
-#         label.pack(pady=10,padx=10)
-
-#         button1 = ttk.Button(self, text="Back to Home",
-#                             command=lambda: controller.show_frame(StartPage))
-#         button1.pack()
-
-#         button2 = ttk.Button(self, text="Page Two",
-#                             command=lambda: controller.show_frame(PageTwo))
-#         button2.pack()
+        graph_page = ttk.Button(self, text="Graph Page",
+                            command=lambda: controller.show_frame(GraphPage))
+        graph_page.pack()
 
 
-# class PageTwo(tk.Frame):
+class ClientPage(tk.Frame):
 
-#     def __init__(self, parent, controller):
-#         tk.Frame.__init__(self, parent)
-#         label = tk.Label(self, text="Page Two!!!", font=LARGE_FONT)
-#         label.pack(pady=10,padx=10)
+    def __init__(self, parent, controller):
+        tk.Frame.__init__(self, parent)
+        label = tk.Label(self, text="Substation Controller", font=LARGE_FONT)
+        label.pack(pady=10,padx=10)
 
-#         button1 = ttk.Button(self, text="Back to Home",
-#                             command=lambda: controller.show_frame(StartPage))
-#         button1.pack()
+        start_client_button = ttk.Button(self, text="Start client",
+                            command = start_client)
+        start_client_button.pack()
 
-#         button2 = ttk.Button(self, text="Page One",
-#                             command=lambda: controller.show_frame(PageOne))
-#         button2.pack()
+
+        back_to_origin = ttk.Button(self, text="Back to Origin",
+                            command=lambda: controller.show_frame(StartPage))
+        back_to_origin.pack()
+
+
+class ServerPage(tk.Frame):
+
+    def __init__(self, parent, controller):
+        tk.Frame.__init__(self, parent)
+        label = tk.Label(self, text="Control Center", font=LARGE_FONT)
+        label.pack(pady=10,padx=10)
+
+        start_server_button = ttk.Button(self, text="Start server",
+                                command = start_server)
+        start_server_button.pack()
+
+        back_to_origin = ttk.Button(self, text="Back to Origin",
+                            command=lambda: controller.show_frame(StartPage))
+        back_to_origin.pack()
 
 
 class GraphPage(tk.Frame):
@@ -131,13 +122,15 @@ class GraphPage(tk.Frame):
         label = tk.Label(self, text="Graph Page!", font=LARGE_FONT)
         label.pack(pady=10,padx=10)
 
-        floodBtn = ttk.Button(self, text="Initiate SYN Flood Attack", command=runFloodAttack)
-
+        floodBtn = ttk.Button(self, text="Initiate SYN Flood Attack", command=run_flood_attack)
         floodBtn.pack()
 
-        mitmAttackBtn = ttk.Button(self, text="Initiate MITM Attack", command=runMitmAttack)
-
+        mitmAttackBtn = ttk.Button(self, text="Initiate MITM Attack", command=run_mitm_attack)
         mitmAttackBtn.pack()
+
+        back_to_origin = ttk.Button(self, text="Back to Origin",
+                            command=lambda: controller.show_frame(StartPage))
+        back_to_origin.pack()
 
         container_main = tk.Frame(self, background="#ffd3d3")
         container_graph_server = tk.Frame(self)
