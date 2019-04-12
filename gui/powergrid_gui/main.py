@@ -2,6 +2,7 @@
 # License: http://creativecommons.org/licenses/by-sa/3.0/
 import tkinter as tk
 from tkinter import ttk
+from scapy.all import *
 import matplotlib
 matplotlib.use("TkAgg")
 from matplotlib.backends.backend_tkagg import FigureCanvasTkAgg, NavigationToolbar2Tk
@@ -9,6 +10,9 @@ from matplotlib.figure import Figure
 import matplotlib.animation as animation
 from matplotlib import style
 import os
+from os import getuid
+import matplotlib.pyplot as plt
+import operator
 from helper_functions import run_flood_attack, run_mitm_attack, start_client, start_server
 
 
@@ -37,7 +41,7 @@ def animate(i):
 class PowerGridGui(tk.Tk):
 
     def __init__(self, *args, **kwargs):
-        
+
         tk.Tk.__init__(self, *args, **kwargs)
 
         # tk.Tk.iconbitmap(self, default="clienticon.ico")
@@ -50,7 +54,7 @@ class PowerGridGui(tk.Tk):
 
         self.frames = {}
 
-        for F in (StartPage, ClientServerUserInput, ClientPage, ServerPage, GraphPage):
+        for F in (StartPage, ClientServerUserInput, ClientPage, ServerPage, GraphPage, LivePlot):
             frame = F(container, self)
             self.frames[F] = frame
             frame.grid(row=0, column=0, sticky="nsew")
@@ -62,7 +66,7 @@ class PowerGridGui(tk.Tk):
         frame = self.frames[cont]
         frame.tkraise()
 
-        
+
 class StartPage(tk.Frame):
 
     def __init__(self, parent, controller):
@@ -81,6 +85,110 @@ class StartPage(tk.Frame):
         user_input_page = ttk.Button(self, text="Attacker Dashboard",
                             command=lambda: controller.show_frame(ClientServerUserInput))
         user_input_page.pack()
+
+        live_plot_button = ttk.Button(self, text="View Packets",
+                            command=lambda: controller.show_frame(LivePlot))
+        live_plot_button.pack()
+
+
+class LivePlot(tk.Frame):
+
+    def __init__(self, parent, controller):
+        tk.Frame.__init__(self, parent)
+
+        back_to_origin = ttk.Button(self, text="Back to Origin",
+                            command=lambda: controller.show_frame(StartPage))
+        back_to_origin.pack()
+
+        labelText=tk.StringVar()
+        labelText.set("Enter interface name to listen:")
+        labelDir=tk.Label(self, textvariable=labelText,height=2)
+        labelDir.pack()
+
+        interface=tk.StringVar(None)
+        self.interfacename=tk.Entry(self,textvariable=interface,width=20)
+        self.interfacename.pack()
+
+        buttonCommit = ttk.Button(self, text="Submit",
+                            command=lambda: self.launchPlot(controller))
+        buttonCommit.pack()
+
+
+    def launchPlot(self,controller):
+        if getuid() != 0:
+            print ("Run with sudo")
+            try:
+                sniff(iface=self.interfacename.get(),count=1)
+            except:
+                print("Error")
+                quit()
+
+        plt.ion()
+        plt.ylabel("Packets received")
+
+        plt.xlabel("Unit of Time")
+
+        plt.title("Real time Network Traffic")
+
+        plt.tight_layout()
+
+        srcCounts = {}
+        mostCommon = ''
+        maxCount = 0
+        seenIPs = []
+        yData=[]
+        yData1=[]
+        xData = []
+        i=0
+        count = 200
+
+        while True:
+             for pkt in sniff(iface=self.interfacename.get(),count=1):
+
+                 try:
+
+                     if IP  in pkt:
+
+                         if (str(pkt[IP].src)) in seenIPs:
+                              #Get current value and add 1
+                              count = srcCounts.get(str(pkt[IP].src))
+                              count = count + 1
+                              srcCounts.update({str(pkt[IP].src) : count })
+                         else:
+                              #Add to freq map
+                              srcCounts.update({str(pkt[IP].src) : 1})
+                              #Add to seen seenIPs
+                              print(str(pkt[IP].src))
+                              seenIPs.append(str(pkt[IP].src))
+                         # Get max of current source IP addresses
+                         yData.append(max(srcCounts.items(), key=operator.itemgetter(1))[1])
+                         plt.plot(yData)
+
+                         #Pause and draw
+
+                         plt.pause(0.1)
+
+                         i+=1
+
+                         # if args.count:
+                         #
+                         #     if i >= args.count:
+                         #
+                         #         quit()
+
+                 except KeyboardInterrupt:
+
+                     print("Captured {} packets on interface {} ".format(i, self.interfacename.get()))
+
+                     quit()
+
+        # text_box_client = tk.Text(self, height=2, width=20)
+        # text_box_client.pack()
+        #
+        #
+        # self.client_ip_input = text_box_client
+
+
 
 
 class ClientPage(tk.Frame):
@@ -134,7 +242,7 @@ class ClientServerUserInput(tk.Frame):
         self.client_ip_input = text_box_client
         self.server_ip_input = text_box_server
 
-        buttonCommit = ttk.Button(self, text="Submit", 
+        buttonCommit = ttk.Button(self, text="Submit",
                             command=lambda: self.retrieve_input(controller))
         buttonCommit.pack()
 
