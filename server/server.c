@@ -83,8 +83,7 @@ int main(int argc, char **argv) {
   auth->value.password.octetString = "InfoSec";
  
   IsoServer isoServer = IedServer_getIsoServer(iedServer);
-  IsoServer_setAuthenticator(isoServer, auth, NULL);
-  //IsoServer_getAuthenticatorParameter(isoServer, auth);
+  IsoServer_setAuthenticator(isoServer, auth, IsoServer_getAuthenticatorParameter(iedServer));
 
   // Start server
   IedServer_start(iedServer, tcpPort);
