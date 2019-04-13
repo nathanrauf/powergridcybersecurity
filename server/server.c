@@ -4,12 +4,14 @@
 #include <signal.h>
 #include <stdio.h>
 #include <stdlib.h>
+#include <iso_connection_parameters.h>
 
 /* import IEC 61850 device model created from SCL-File */
 extern IedModel iedModel;
 
 static int running = 0;
 static IedServer iedServer = NULL;
+//static char AUTH_PASSWORD[] = "InfoSec";
 
 #define NUM_TO_SERVER 2
 #define NUM_TO_CLIENT 2
@@ -73,6 +75,16 @@ int main(int argc, char **argv) {
 
   IedServer_setConnectionIndicationHandler(
       iedServer, (IedConnectionIndicationHandler)connectionHandler, NULL);
+
+  //Authentication
+  AcseAuthenticationParameter auth =
+    calloc(1, sizeof(struct sAcseAuthenticationParameter));
+  auth->mechanism = ACSE_AUTH_PASSWORD;
+  auth->value.password.octetString = "InfoSec";
+ 
+  IsoServer isoServer = IedServer_getIsoServer(iedServer);
+  IsoServer_setAuthenticator(isoServer, auth, NULL);
+  //IsoServer_getAuthenticatorParameter(isoServer, auth);
 
   // Start server
   IedServer_start(iedServer, tcpPort);
