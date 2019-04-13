@@ -68,21 +68,23 @@ static void connectionHandler(IedServer self, ClientConnection connection,
 void sigint_handler(int signalId) { running = 0; }
 
 int main(int argc, char **argv) {
+  printf("1");
   char *hostname;
   int tcpPort = 102;
 
+  printf("1");
   iedServer = IedServer_create(&iedModel);
 
   /* Set the base path for the MMS file services */
+  printf("1");
   MmsServer mmsServer = IedServer_getMmsServer(iedServer);
   MmsServer_setFilestoreBasepath(mmsServer, "./vmd-filestore/");
-
   IedServer_setConnectionIndicationHandler(
       iedServer, (IedConnectionIndicationHandler)connectionHandler, NULL);
 
   /* MMS server will be instructed to start listening to client connections. */
+  printf("1");
   IedServer_start(iedServer, 103);
-
   if (!IedServer_isRunning(iedServer)) {
     printf("Starting server failed! Exit.\n");
     IedServer_destroy(iedServer);
@@ -93,6 +95,7 @@ int main(int argc, char **argv) {
 
   // signal(SIGINT, sigint_handler);
 
+  printf("1");
   IedServer_setWriteAccessPolicy(iedServer, IEC61850_FC_DC,
                                  ACCESS_POLICY_ALLOW);
   IedServer_setWriteAccessPolicy(iedServer, IEC61850_FC_CF,
@@ -119,20 +122,20 @@ int main(int argc, char **argv) {
 
   // Establish connection with the server
   IedClientError error;
-
+  
   IedConnection connection = IedConnection_create();
   
-  MmsConnection mmsCon = MmsConnection_getIsoConnectionParameters(connection);
+  MmsConnection mmsCon = IedConnection_getMmsConnection(connection);
   IsoConnectionParameters parameters = MmsConnection_getIsoConnectionParameters(mmsCon);
 
-  char * password = "InfoSec";  
+  char* password = "InfoSec";  
   AcseAuthenticationParameter auth = (AcseAuthenticationParameter)calloc(1, sizeof(struct sAcseAuthenticationParameter));
   auth->mechanism = ACSE_AUTH_PASSWORD;
   auth->value.password.octetString = (uint8_t*) password;
   auth->value.password.passwordLength = strlen(password);
   
   IsoConnectionParameters_setAcseAuthenticationParameter(parameters, auth);
-
+  
   IedConnection_connect(connection, &error, hostname, tcpPort);
 
   // Successful connection to the server
