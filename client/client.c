@@ -5,6 +5,8 @@
 #include <signal.h>
 #include <stdio.h>
 #include <stdlib.h>
+#include "iso_connection_parameters.h"
+#include "mms_client_connection.h"
 
 #define NUM_TO_CLIENT 2
 #define NUM_TO_SERVER 2
@@ -101,7 +103,7 @@ int main(int argc, char **argv) {
                                  ACCESS_POLICY_ALLOW);
   IedServer_setWriteAccessPolicy(iedServer, IEC61850_FC_SE,
                                  ACCESS_POLICY_ALLOW);
-
+  
   // Get the host IP from the user
   if (argc > 1) {
     hostname = argv[1];
@@ -119,6 +121,18 @@ int main(int argc, char **argv) {
   IedClientError error;
 
   IedConnection connection = IedConnection_create();
+  
+  MmsConnection mmsCon = MmsConnection_getIsoConnectionParameters(connection);
+  IsoConnectionParameters parameters = MmsConnection_getIsoConnectionParameters(mmsCon);
+
+  char * password = "InfoSec";  
+  AcseAuthenticationParameter auth = (AcseAuthenticationParameter)calloc(1, sizeof(struct sAcseAuthenticationParameter));
+  auth->mechanism = ACSE_AUTH_PASSWORD;
+  auth->value.password.octetString = (uint8_t*) password;
+  auth->value.password.passwordLength = strlen(password);
+  
+  IsoConnectionParameters_setAcseAuthenticationParameter(parameters, auth);
+
   IedConnection_connect(connection, &error, hostname, tcpPort);
 
   // Successful connection to the server
