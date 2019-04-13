@@ -1,7 +1,8 @@
 # The code for changing pages was derived from: http://stackoverflow.com/questions/7546050/switch-between-two-frames-in-tkinter
 # License: http://creativecommons.org/licenses/by-sa/3.0/
+import tkinter as tk
 from tkinter import ttk
-
+from scapy.all import *
 import matplotlib
 matplotlib.use("TkAgg")
 from matplotlib.backends.backend_tkagg import FigureCanvasTkAgg, NavigationToolbar2Tk
@@ -9,7 +10,10 @@ from matplotlib.figure import Figure
 import matplotlib.animation as animation
 from matplotlib import style
 import os
-import tkinter as tk
+from os import getuid
+import matplotlib.pyplot as plt
+import operator
+from helper_functions import run_flood_attack, run_mitm_attack, start_client, start_server
 
 
 LARGE_FONT= ("Verdana", 12)
@@ -33,24 +37,15 @@ def animate(i):
     a.clear()
     a.plot(xList, yList)
 
-def runFloodAttack():
-    from attacks import synflood
-
-
-
-def runMitmAttack():
-    from attacks import mitm
-
 
 class PowerGridGui(tk.Tk):
 
     def __init__(self, *args, **kwargs):
-        
+
         tk.Tk.__init__(self, *args, **kwargs)
 
         # tk.Tk.iconbitmap(self, default="clienticon.ico")
         tk.Tk.wm_title(self, "Power Grid Simulator")
-
 
         container = tk.Frame(self)
         container.pack(side="top", fill="both", expand = True)
@@ -59,69 +54,208 @@ class PowerGridGui(tk.Tk):
 
         self.frames = {}
 
-        F = GraphPage
-        frame = F(container, self)
-        self.frames[F] = frame
-        frame.grid(row=0, column=0, sticky="nsew")
+        for F in (StartPage, ClientServerUserInput, ClientPage, ServerPage, GraphPage, LivePlot):
+            frame = F(container, self)
+            self.frames[F] = frame
+            frame.grid(row=0, column=0, sticky="nsew")
 
-        self.show_frame(GraphPage)
+        self.show_frame(StartPage)
 
     def show_frame(self, cont):
 
         frame = self.frames[cont]
         frame.tkraise()
 
-        
-# class StartPage(tk.Frame):
 
-#     def __init__(self, parent, controller):
-#         tk.Frame.__init__(self,parent)
-#         label = tk.Label(self, text="Start Page", font=LARGE_FONT)
-#         label.pack(pady=10,padx=10)
+class StartPage(tk.Frame):
 
-#         button = ttk.Button(self, text="Visit Page 1",
-#                             command=lambda: controller.show_frame(PageOne))
-#         button.pack()
+    def __init__(self, parent, controller):
+        tk.Frame.__init__(self,parent)
+        label = tk.Label(self, text="Power Grid Management System", font=LARGE_FONT)
+        label.pack(pady=10,padx=10)
 
-#         button2 = ttk.Button(self, text="Visit Page 2",
-#                             command=lambda: controller.show_frame(PageTwo))
-#         button2.pack()
+        client_button = ttk.Button(self, text="Start Client (Substation)",
+                            command=lambda: controller.show_frame(ClientPage))
+        client_button.pack()
 
-#         button3 = ttk.Button(self, text="Graph Page",
-#                             command=lambda: controller.show_frame(GraphPage))
-#         button3.pack()
+        server_button = ttk.Button(self, text="Start Server (Control Center)",
+                            command=lambda: controller.show_frame(ServerPage))
+        server_button.pack()
 
+        user_input_page = ttk.Button(self, text="Attacker Dashboard",
+                            command=lambda: controller.show_frame(ClientServerUserInput))
+        user_input_page.pack()
 
-# class PageOne(tk.Frame):
-
-#     def __init__(self, parent, controller):
-#         tk.Frame.__init__(self, parent)
-#         label = tk.Label(self, text="Page One!!!", font=LARGE_FONT)
-#         label.pack(pady=10,padx=10)
-
-#         button1 = ttk.Button(self, text="Back to Home",
-#                             command=lambda: controller.show_frame(StartPage))
-#         button1.pack()
-
-#         button2 = ttk.Button(self, text="Page Two",
-#                             command=lambda: controller.show_frame(PageTwo))
-#         button2.pack()
+        live_plot_button = ttk.Button(self, text="View Packets",
+                            command=lambda: controller.show_frame(LivePlot))
+        live_plot_button.pack()
 
 
-# class PageTwo(tk.Frame):
+class LivePlot(tk.Frame):
 
-#     def __init__(self, parent, controller):
-#         tk.Frame.__init__(self, parent)
-#         label = tk.Label(self, text="Page Two!!!", font=LARGE_FONT)
-#         label.pack(pady=10,padx=10)
+    def __init__(self, parent, controller):
+        tk.Frame.__init__(self, parent)
 
-#         button1 = ttk.Button(self, text="Back to Home",
-#                             command=lambda: controller.show_frame(StartPage))
-#         button1.pack()
+        back_to_origin = ttk.Button(self, text="Back to Origin",
+                            command=lambda: controller.show_frame(StartPage))
+        back_to_origin.pack()
 
-#         button2 = ttk.Button(self, text="Page One",
-#                             command=lambda: controller.show_frame(PageOne))
-#         button2.pack()
+        labelText=tk.StringVar()
+        labelText.set("Enter interface name to listen:")
+        labelDir=tk.Label(self, textvariable=labelText,height=2)
+        labelDir.pack()
+
+        interface=tk.StringVar(None)
+        self.interfacename=tk.Entry(self,textvariable=interface,width=20)
+        self.interfacename.pack()
+
+        buttonCommit = ttk.Button(self, text="Submit",
+                            command=lambda: self.launchPlot(controller))
+        buttonCommit.pack()
+
+
+    def launchPlot(self,controller):
+        if getuid() != 0:
+            print ("Run with sudo")
+            try:
+                sniff(iface=self.interfacename.get(),count=1)
+            except:
+                print("Error")
+                quit()
+
+        plt.ion()
+        plt.ylabel("Packets received")
+
+        plt.xlabel("Unit of Time")
+
+        plt.title("Real time Network Traffic")
+
+        plt.tight_layout()
+
+        srcCounts = {}
+        mostCommon = ''
+        maxCount = 0
+        seenIPs = []
+        yData=[]
+        yData1=[]
+        xData = []
+        i=0
+        count = 200
+
+        while True:
+             for pkt in sniff(iface=self.interfacename.get(),count=1):
+
+                 try:
+
+                     if IP  in pkt:
+
+                         if (str(pkt[IP].src)) in seenIPs:
+                              #Get current value and add 1
+                              count = srcCounts.get(str(pkt[IP].src))
+                              count = count + 1
+                              srcCounts.update({str(pkt[IP].src) : count })
+                         else:
+                              #Add to freq map
+                              srcCounts.update({str(pkt[IP].src) : 1})
+                              #Add to seen seenIPs
+                              print(str(pkt[IP].src))
+                              seenIPs.append(str(pkt[IP].src))
+                         # Get max of current source IP addresses
+                         yData.append(max(srcCounts.items(), key=operator.itemgetter(1))[1])
+                         plt.plot(yData)
+
+                         #Pause and draw
+
+                         plt.pause(0.1)
+
+                         i+=1
+
+                         # if args.count:
+                         #
+                         #     if i >= args.count:
+                         #
+                         #         quit()
+
+                 except KeyboardInterrupt:
+
+                     print("Captured {} packets on interface {} ".format(i, self.interfacename.get()))
+
+                     quit()
+
+        # text_box_client = tk.Text(self, height=2, width=20)
+        # text_box_client.pack()
+        #
+        #
+        # self.client_ip_input = text_box_client
+
+
+
+
+class ClientPage(tk.Frame):
+
+    def __init__(self, parent, controller):
+        tk.Frame.__init__(self, parent)
+        label = tk.Label(self, text="Substation Controller", font=LARGE_FONT)
+        label.pack(pady=10,padx=10)
+
+        start_client_button = ttk.Button(self, text="Start client",
+                            command=lambda: start_client("196.128.86.1"))
+        start_client_button.pack()
+
+
+        back_to_origin = ttk.Button(self, text="Back to Origin",
+                            command=lambda: controller.show_frame(StartPage))
+        back_to_origin.pack()
+
+
+class ServerPage(tk.Frame):
+
+    def __init__(self, parent, controller):
+        tk.Frame.__init__(self, parent)
+        label = tk.Label(self, text="Control Center", font=LARGE_FONT)
+        label.pack(pady=10,padx=10)
+
+        start_server_button = ttk.Button(self, text="Start server",
+                                command=lambda: start_server())
+        start_server_button.pack()
+
+        back_to_origin = ttk.Button(self, text="Back to Origin",
+                            command=lambda: controller.show_frame(StartPage))
+        back_to_origin.pack()
+
+
+class ClientServerUserInput(tk.Frame):
+    # need to error check
+
+    # client_ip_input = None
+    # server_ip_input = None
+
+    def __init__(self, parent, controller):
+        tk.Frame.__init__(self, parent)
+
+        text_box_client = tk.Text(self, height=2, width=10)
+        text_box_client.pack()
+
+        text_box_server = tk.Text(self, height=2, width=10)
+        text_box_server.pack()
+
+        self.client_ip_input = text_box_client
+        self.server_ip_input = text_box_server
+
+        buttonCommit = ttk.Button(self, text="Submit",
+                            command=lambda: self.retrieve_input(controller))
+        buttonCommit.pack()
+
+        back_to_origin = ttk.Button(self, text="Back to Origin",
+                            command=lambda: controller.show_frame(StartPage))
+        back_to_origin.pack()
+
+    def retrieve_input(self,controller):
+        client_ip = self.client_ip_input.get("1.0","end-1c")
+        server_ip = self.server_ip_input.get("1.0","end-1c")
+        print(client_ip)
+        print(server_ip)
+        controller.show_frame(GraphPage)
 
 
 class GraphPage(tk.Frame):
@@ -131,13 +265,15 @@ class GraphPage(tk.Frame):
         label = tk.Label(self, text="Graph Page!", font=LARGE_FONT)
         label.pack(pady=10,padx=10)
 
-        floodBtn = ttk.Button(self, text="Initiate SYN Flood Attack", command=runFloodAttack)
-
+        floodBtn = ttk.Button(self, text="Initiate SYN Flood Attack", command=run_flood_attack)
         floodBtn.pack()
 
-        mitmAttackBtn = ttk.Button(self, text="Initiate MITM Attack", command=runMitmAttack)
-
+        mitmAttackBtn = ttk.Button(self, text="Initiate MITM Attack", command=run_mitm_attack)
         mitmAttackBtn.pack()
+
+        back_to_origin = ttk.Button(self, text="Back to Origin",
+                            command=lambda: controller.show_frame(StartPage))
+        back_to_origin.pack()
 
         container_main = tk.Frame(self, background="#ffd3d3")
         container_graph_server = tk.Frame(self)

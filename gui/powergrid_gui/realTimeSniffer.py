@@ -1,4 +1,7 @@
 from scapy.all import *
+import tkinter
+from matplotlib.backends.backend_tkagg import (
+    FigureCanvasTkAgg, NavigationToolbar2Tk)
 
 import matplotlib.pyplot as plt
 
@@ -67,7 +70,17 @@ yData=[]
 yData1=[]
 xData = []
 
+#___________________________tkinter________________________
+fig = plt.figure(1)
+root = tkinter.Tk()
+canvas = FigureCanvasTkAgg(fig, master=root)  # A tk.DrawingArea.
+canvas.draw()
+canvas.get_tk_widget().pack(side=tkinter.TOP, fill=tkinter.BOTH, expand=1)
 
+T = tkinter.Text(root)
+T.pack()
+
+#___________________________tkinter________________________
 
 i=0
 
@@ -94,6 +107,7 @@ while True:
                     #Add to seen seenIPs
                     print(str(pkt[IP].src))
                     seenIPs.append(str(pkt[IP].src))
+                    T.insert(tkinter.END, "Packet Source: " + str(pkt[IP].src) + " || Packet Dest: " + str(pkt[IP].dst) + "\n")
                # Get max of current source IP addresses
                yData.append(max(srcCounts.iteritems(), key=operator.itemgetter(1))[1])
                plt.plot(yData)
@@ -115,3 +129,5 @@ while True:
            print("Captured {} packets on interface {} ".format(i, args.interface))
 
            quit()
+
+tkinter.mainloop()
