@@ -11,7 +11,7 @@ extern IedModel iedModel;
 
 static int running = 0;
 static IedServer iedServer = NULL;
-//static char AUTH_PASSWORD[] = "InfoSec";
+static char * password = "InfoSec";
 
 #define NUM_TO_SERVER 2
 #define NUM_TO_CLIENT 2
@@ -65,6 +65,25 @@ static void connectionHandler(IedServer self, ClientConnection connection,
     printf("Connection closed\n");
 }
 
+static bool
+clientAuthenticator(void* parameter, AcseAuthenticationParameter authParameter, void** securityToken, IsoApplicationReference* appRef)
+{
+    if (authParameter->mechanism == ACSE_AUTH_PASSWORD) {
+        if (authParameter->value.password.passwordLength == strlen(password)) {
+            if (memcmp(authParameter->value.password.octetString, password,
+                    authParameter->value.password.passwordLength) == 0)
+            {
+                *securityToken = (void*) password;
+                return true;
+            }
+
+        }
+    }
+
+    return false;
+}
+
+
 void sigint_handler(int signalId) { running = 0; }
 
 int main(int argc, char **argv) {
@@ -75,15 +94,22 @@ int main(int argc, char **argv) {
 
   IedServer_setConnectionIndicationHandler(
       iedServer, (IedConnectionIndicationHandler)connectionHandler, NULL);
+  
+  //Authentication  
+  IedServer_setAuthenticator(iedServer, clientAuthenticator, NULL);
 
   //Authentication
+  /*
+  char * password = "InfoSec";
   AcseAuthenticationParameter auth =
     calloc(1, sizeof(struct sAcseAuthenticationParameter));
   auth->mechanism = ACSE_AUTH_PASSWORD;
-  auth->value.password.octetString = "InfoSec";
+  auth->value.password.octetString = (uint8_t) password;
+  auth->value.password.length = strlen(password);
  
   IsoServer isoServer = IedServer_getIsoServer(iedServer);
   IsoServer_setAuthenticator(isoServer, auth, IsoServer_getAuthenticatorParameter(iedServer));
+  */
 
   // Start server
   IedServer_start(iedServer, tcpPort);
