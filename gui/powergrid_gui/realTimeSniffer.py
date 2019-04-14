@@ -73,6 +73,7 @@ xData = []
 #___________________________tkinter________________________
 fig = plt.figure(1)
 root = tkinter.Tk()
+root.title("Interface Packets Received over Time")
 canvas = FigureCanvasTkAgg(fig, master=root)  # A tk.DrawingArea.
 canvas.draw()
 canvas.get_tk_widget().pack(side=tkinter.TOP, fill=tkinter.BOTH, expand=1)
