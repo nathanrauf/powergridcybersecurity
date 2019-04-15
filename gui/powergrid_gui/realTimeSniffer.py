@@ -95,8 +95,7 @@ while True:
 
                if (str(pkt[IP].src)) in seenIPs:
                     #Get current value and add 1
-                     T.insert(tkinter.END,
-                            "Packet Source: " + str(pkt[IP].src) + " || Packet Dest: " + str(pkt[IP].dst) + "\n")
+                     T.insert(tkinter.END, "Packet Source: " + str(pkt[IP].src) + " || Packet Dest: " + str(pkt[IP].dst) + "\n")
                     count = srcCounts.get(str(pkt[IP].src))
                     count = count + 1
                     srcCounts.update({str(pkt[IP].src) : count })
