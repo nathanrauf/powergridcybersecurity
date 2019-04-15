@@ -245,7 +245,10 @@ class AttackerDashboard(tk.Frame):
         floodBtn = ttk.Button(self, text="Initiate SYN Flood Attack", command=lambda: self.run_flood_attack())
         floodBtn.pack()
 
-        mitmAttackBtn = ttk.Button(self, text="Initiate MITM Attack", command=lambda: self.start_mitm_attack(self.get_input_interface(), self.get_input_client_ip(), self.get_input_server_ip()))
+        mitmAttackBtn_OneWay = ttk.Button(self, text="Initiate 1 way MITM Attack", command=lambda: self.start_mitm_attack(self.get_input_interface(), self.get_input_client_ip(), self.get_input_server_ip(), '1'))
+        mitmAttackBtn_OneWay.pack()
+
+        mitmAttackBtn = ttk.Button(self, text="Initiate 2 way MITM Attack", command=lambda: self.start_mitm_attack(self.get_input_interface(), self.get_input_client_ip(), self.get_input_server_ip(), '2'))
         mitmAttackBtn.pack()
 
         stop_mitm_attack_btn = ttk.Button(self, text="Stop MITM Attack", command=lambda: self.stop_mitm_attack())
@@ -265,6 +268,14 @@ class AttackerDashboard(tk.Frame):
         self.synflood_instance = SynFlood(victim_ip, victim_port, num_packets)
         self.synflood_instance.start_attack()
 
+    def start_mitm_attack(self, interface, victim_ip, gate_ip, way):
+        print("Starting MITM attack")
+        command = ['python', 'mitm.py', interface, victim_ip, gate_ip, way]
+        self.mitm_intstance = subprocess.Popen(command)
+
+    def stop_mitm_attack(self):
+      os.kill(self.mitm_intstance.pid, signal.SIGINT)
+
     def get_input_client_ip(self):
         victim = self.controller.shared_data["client_ip"].get()
         return victim
@@ -276,14 +287,6 @@ class AttackerDashboard(tk.Frame):
     def get_input_interface(self):
         interface = self.controller.shared_data["interface"].get()
         return interface
-
-    def start_mitm_attack(self, interface, victim_ip, gate_ip):
-        print("Starting MITM attack")
-        command = ['python', 'mitm.py', interface, victim_ip, gate_ip]
-        self.mitm_intstance = subprocess.Popen(command)
-
-    def stop_mitm_attack(self):
-      os.kill(self.mitm_intstance.pid, signal.SIGINT)
 
 
 app = PowerGridGui()

