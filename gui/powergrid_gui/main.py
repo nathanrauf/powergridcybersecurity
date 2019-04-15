@@ -11,7 +11,7 @@ from matplotlib.figure import Figure
 import matplotlib.animation as animation
 from matplotlib import style
 import os
-from helper_functions import start_client, start_server
+from helper_functions import start_client, start_server, start_packet_tracker
 import re
 from Mitm import *
 from SynFlood import *
@@ -123,86 +123,8 @@ class LivePlot(tk.Frame):
         self.interfacename.pack()
 
         buttonCommit = ttk.Button(self, text="Submit",
-                            command=lambda: self.launchPlot(controller))
+                            command=lambda: start_packet_tracker(self.interfacename.get()))
         buttonCommit.pack()
-
-
-    def launchPlot(self,controller):
-        if getuid() != 0:
-            print ("Run with sudo")
-            try:
-                sniff(iface=self.interfacename.get(),count=1)
-            except:
-                print("Error")
-                quit()
-
-        plt.ion()
-        plt.ylabel("Packets received")
-
-        plt.xlabel("Unit of Time")
-
-        plt.title("Real time Network Traffic")
-
-        plt.tight_layout()
-
-        srcCounts = {}
-        mostCommon = ''
-        maxCount = 0
-        seenIPs = []
-        yData=[]
-        yData1=[]
-        xData = []
-        i=0
-        count = 200
-
-        while True:
-             for pkt in sniff(iface=self.interfacename.get(),count=1):
-
-                 try:
-
-                     if IP  in pkt:
-
-                         if (str(pkt[IP].src)) in seenIPs:
-                              #Get current value and add 1
-                              count = srcCounts.get(str(pkt[IP].src))
-                              count = count + 1
-                              srcCounts.update({str(pkt[IP].src) : count })
-                         else:
-                              #Add to freq map
-                              srcCounts.update({str(pkt[IP].src) : 1})
-                              #Add to seen seenIPs
-                              print(str(pkt[IP].src))
-                              seenIPs.append(str(pkt[IP].src))
-                         # Get max of current source IP addresses
-                         yData.append(max(srcCounts.items(), key=operator.itemgetter(1))[1])
-                         plt.plot(yData)
-
-                         #Pause and draw
-
-                         plt.pause(0.1)
-
-                         i+=1
-
-                         # if args.count:
-                         #
-                         #     if i >= args.count:
-                         #
-                         #         quit()
-
-                 except KeyboardInterrupt:
-
-                     print("Captured {} packets on interface {} ".format(i, self.interfacename.get()))
-
-                     quit()
-
-        # text_box_client = tk.Text(self, height=2, width=20)
-        # text_box_client.pack()
-        #
-        #
-        # self.client_ip_input = text_box_client
-
-
-
 
 class ClientPage(tk.Frame):
 

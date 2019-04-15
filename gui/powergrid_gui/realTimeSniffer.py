@@ -1,13 +1,9 @@
 from scapy.all import *
 import tkinter
-from matplotlib.backends.backend_tkagg import (
-    FigureCanvasTkAgg, NavigationToolbar2Tk)
-
+from matplotlib.backends.backend_tkagg import FigureCanvasTkAgg, NavigationToolbar2Tk
 import matplotlib.pyplot as plt
-
 import argparse
 import operator
-
 from os import getuid
 
 parser = argparse.ArgumentParser(description='Client/Server Live Traffic')
