@@ -11,9 +11,10 @@ from matplotlib.figure import Figure
 import matplotlib.animation as animation
 from matplotlib import style
 import os
+import subprocess 
+import signal
 from helper_functions import start_client, start_server, start_packet_tracker
 import re
-from Mitm import *
 from SynFlood import *
 from os import getuid
 import operator
@@ -21,24 +22,6 @@ import operator
 
 LARGE_FONT= ("Verdana", 12)
 style.use("ggplot")
-
-f = Figure(figsize=(5,5), dpi=100)
-a = f.add_subplot(111)
-
-
-def animate(i):
-    pullData = open("./graph_data/data.txt","r").read()
-    dataList = pullData.split('\n')
-    xList = []
-    yList = []
-    for eachLine in dataList:
-        if len(eachLine) > 1:
-            x, y = eachLine.split(',')
-            xList.append(int(x))
-            yList.append(int(y))
-
-    a.clear()
-    a.plot(xList, yList)
 
 
 class PowerGridGui(tk.Tk):
@@ -49,7 +32,7 @@ class PowerGridGui(tk.Tk):
 
         self.shared_data = {
             "client_ip": tk.StringVar(),
-            "router_ip": tk.StringVar(),
+            "server_ip": tk.StringVar(),
             "interface": tk.StringVar(),
             "port": tk.StringVar(),
         }
@@ -65,7 +48,7 @@ class PowerGridGui(tk.Tk):
 
         self.frames = {}
 
-        for F in (StartPage, ClientServerUserInput, ClientPage, ServerPage, GraphPage, LivePlot):
+        for F in (StartPage, ClientServerUserInput, ClientPage, ServerPage, AttackerDashboard, LivePlot):
             frame = F(container, self)
             self.frames[F] = frame
             frame.grid(row=0, column=0, sticky="nsew")
@@ -109,10 +92,6 @@ class LivePlot(tk.Frame):
     def __init__(self, parent, controller):
         tk.Frame.__init__(self, parent)
 
-        back_to_origin = ttk.Button(self, text="Back to Origin",
-                            command=lambda: controller.show_frame(StartPage))
-        back_to_origin.pack()
-
         labelText=tk.StringVar()
         labelText.set("Enter interface name to listen:")
         labelDir=tk.Label(self, textvariable=labelText,height=2)
@@ -126,6 +105,10 @@ class LivePlot(tk.Frame):
                             command=lambda: start_packet_tracker(self.interfacename.get()))
         buttonCommit.pack()
 
+        back_to_origin = ttk.Button(self, text="Back to Origin",
+                            command=lambda: controller.show_frame(StartPage))
+        back_to_origin.pack()
+
 class ClientPage(tk.Frame):
 
     def __init__(self, parent, controller):
@@ -135,10 +118,27 @@ class ClientPage(tk.Frame):
         label = tk.Label(self, text="Substation Controller", font=LARGE_FONT)
         label.pack(pady=10,padx=10)
 
-        start_client_button = ttk.Button(self, text="Start client",
-                            command=lambda: start_client("196.128.86.1"))
-        start_client_button.pack()
+        labelText=tk.StringVar()
+        labelText.set("Enter server IP:")
+        labelDir=tk.Label(self, textvariable=labelText,height=2)
+        labelDir.pack()
 
+        server=tk.StringVar(None)
+        self.server_ip=tk.Entry(self,textvariable=server,width=20)
+        self.server_ip.pack()
+
+        pass_label_text=tk.StringVar()
+        pass_label_text.set("Enter client password:")
+        pass_label_dir=tk.Label(self, textvariable=pass_label_text,height=2)
+        pass_label_dir.pack()
+
+        passw=tk.StringVar(None)
+        self.client_pass=tk.Entry(self,show='*',width=20)
+        self.client_pass.pack()
+
+        start_client_button = ttk.Button(self, text="Start client",
+                            command=lambda: start_client(self.server_ip.get(), self.client_pass.get()))
+        start_client_button.pack()
 
         back_to_origin = ttk.Button(self, text="Back to Origin",
                             command=lambda: controller.show_frame(StartPage))
@@ -188,7 +188,7 @@ class ClientServerUserInput(tk.Frame):
         text_box_client = ttk.Entry(self, textvariable=self.controller.shared_data["client_ip"])
         text_box_client.pack(in_=client_frame, side="right")
 
-        text_box_server = ttk.Entry(self, textvariable=self.controller.shared_data["router_ip"])
+        text_box_server = ttk.Entry(self, textvariable=self.controller.shared_data["server_ip"])
         text_box_server.pack(in_=server_frame, side="right")
 
         text_box_interface = ttk.Entry(self, textvariable=self.controller.shared_data["interface"])
@@ -200,6 +200,12 @@ class ClientServerUserInput(tk.Frame):
         self.client_ip_input = text_box_client
         self.router_ip_input = text_box_server
 
+        client_frame.pack(side="top", fill="x")
+        server_frame.pack(side="top", fill="x")
+        interface_frame.pack(side="top", fill="x")
+        port_frame.pack(side="top", fill="x")
+
+
         buttonCommit = ttk.Button(self, text="Submit",
                             command=lambda: self.retrieve_input(controller))
         buttonCommit.pack()
@@ -207,12 +213,6 @@ class ClientServerUserInput(tk.Frame):
         back_to_origin = ttk.Button(self, text="Back to Origin",
                             command=lambda: controller.show_frame(StartPage))
         back_to_origin.pack()
-
-        client_frame.pack(side="top", fill="x")
-        server_frame.pack(side="top", fill="x")
-        interface_frame.pack(side="top", fill="x")
-        port_frame.pack(side="top", fill="x")
-
 
     def retrieve_input(self,controller):
 
@@ -222,13 +222,13 @@ class ClientServerUserInput(tk.Frame):
         ip_regex = re.compile("^\d{1,3}\.\d{1,3}\.\d{1,3}\.\d{1,3}$")
 
         if ip_regex.match(client_ip) and ip_regex.match(router_ip):
-            controller.show_frame(GraphPage)
+            controller.show_frame(AttackerDashboard)
         else:
             # TODO: add error text
             print("Enter correct input")
 
         
-class GraphPage(tk.Frame):
+class AttackerDashboard(tk.Frame):
 
     def __init__(self, parent, controller):
 
@@ -239,13 +239,13 @@ class GraphPage(tk.Frame):
         tk.Frame.__init__(self, parent)
 
 
-        label = tk.Label(self, text="Graph Page!", font=LARGE_FONT)
+        label = tk.Label(self, text="Attacker Dashboard", font=LARGE_FONT)
         label.pack(pady=10,padx=10)
 
         floodBtn = ttk.Button(self, text="Initiate SYN Flood Attack", command=lambda: self.run_flood_attack())
         floodBtn.pack()
 
-        mitmAttackBtn = ttk.Button(self, text="Initiate MITM Attack", command=lambda: self.run_mitm_attack())
+        mitmAttackBtn = ttk.Button(self, text="Initiate MITM Attack", command=lambda: self.start_mitm_attack(self.get_input_interface(), self.get_input_client_ip(), self.get_input_server_ip()))
         mitmAttackBtn.pack()
 
         stop_mitm_attack_btn = ttk.Button(self, text="Stop MITM Attack", command=lambda: self.stop_mitm_attack())
@@ -254,31 +254,6 @@ class GraphPage(tk.Frame):
         back_to_origin = ttk.Button(self, text="Back to Origin",
                             command=lambda: controller.show_frame(StartPage))
         back_to_origin.pack()
-
-        container_main = tk.Frame(self, background="#ffd3d3")
-        container_graph_server = tk.Frame(self)
-        container_graph_client = tk.Frame(self)
-
-        canvas = FigureCanvasTkAgg(f, self)
-        canvas.draw()
-        canvas.get_tk_widget().pack(in_=container_graph_server, side=tk.BOTTOM, fill=tk.BOTH, expand=True)
-
-        toolbar = NavigationToolbar2Tk(canvas, self)
-        toolbar.update()
-        canvas._tkcanvas.pack(in_=container_graph_server, side=tk.TOP, fill=tk.BOTH, expand=True)
-
-        canvas2 = FigureCanvasTkAgg(f, self)
-        canvas2.draw()
-        canvas2.get_tk_widget().pack(in_=container_graph_client, side=tk.BOTTOM, fill=tk.BOTH, expand=True)
-
-        toolbar2 = NavigationToolbar2Tk(canvas2, self)
-        toolbar2.update()
-        canvas2._tkcanvas.pack(in_=container_graph_client, side=tk.TOP, fill=tk.BOTH, expand=True)
-
-        container_graph_server.pack(in_=container_main, side="left")
-        container_graph_client.pack(in_=container_main, side="left")
-        container_main.pack(side="top", fill="x")
-
 
     def run_flood_attack(self):
       # from attacks import synflood
@@ -290,18 +265,26 @@ class GraphPage(tk.Frame):
         self.synflood_instance = SynFlood(victim_ip, victim_port, num_packets)
         self.synflood_instance.start_attack()
 
-    def run_mitm_attack(self):
-
+    def get_input_client_ip(self):
         victim = self.controller.shared_data["client_ip"].get()
-        router = self.controller.shared_data["router_ip"].get()
+        return victim
+
+    def get_input_server_ip(self):
+        router = self.controller.shared_data["server_ip"].get()
+        return router
+
+    def get_input_interface(self):
         interface = self.controller.shared_data["interface"].get()
-        self.mitm_intstance = Mitm(interface, victim, router)
-        self.mitm_intstance.start_attack()
+        return interface
+
+    def start_mitm_attack(self, interface, victim_ip, gate_ip):
+        print("Starting MITM attack")
+        command = ['python', 'mitm.py', interface, victim_ip, gate_ip]
+        self.mitm_intstance = subprocess.Popen(command)
 
     def stop_mitm_attack(self):
-        self.mitm_intstance.stop_attack()
+      os.kill(self.mitm_intstance.pid, signal.SIGINT)
 
 
 app = PowerGridGui()
-ani = animation.FuncAnimation(f, animate, interval=1000)
 app.mainloop()
