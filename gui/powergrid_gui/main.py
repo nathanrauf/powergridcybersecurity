@@ -4,16 +4,19 @@ import tkinter as tk
 from tkinter import ttk
 from scapy.all import *
 import matplotlib
+import matplotlib.pyplot as plt
 matplotlib.use("TkAgg")
 from matplotlib.backends.backend_tkagg import FigureCanvasTkAgg, NavigationToolbar2Tk
 from matplotlib.figure import Figure
 import matplotlib.animation as animation
 from matplotlib import style
 import os
+from helper_functions import start_client, start_server
+import re
+from Mitm import *
+from SynFlood import *
 from os import getuid
-import matplotlib.pyplot as plt
 import operator
-from helper_functions import run_flood_attack, run_mitm_attack, start_client, start_server
 
 
 LARGE_FONT= ("Verdana", 12)
@@ -44,6 +47,14 @@ class PowerGridGui(tk.Tk):
 
         tk.Tk.__init__(self, *args, **kwargs)
 
+        self.shared_data = {
+            "client_ip": tk.StringVar(),
+            "router_ip": tk.StringVar(),
+            "interface": tk.StringVar(),
+            "port": tk.StringVar(),
+        }
+
+
         # tk.Tk.iconbitmap(self, default="clienticon.ico")
         tk.Tk.wm_title(self, "Power Grid Simulator")
 
@@ -71,6 +82,8 @@ class StartPage(tk.Frame):
 
     def __init__(self, parent, controller):
         tk.Frame.__init__(self,parent)
+        self.controller = controller
+
         label = tk.Label(self, text="Power Grid Management System", font=LARGE_FONT)
         label.pack(pady=10,padx=10)
 
@@ -195,6 +208,8 @@ class ClientPage(tk.Frame):
 
     def __init__(self, parent, controller):
         tk.Frame.__init__(self, parent)
+        self.controller = controller
+
         label = tk.Label(self, text="Substation Controller", font=LARGE_FONT)
         label.pack(pady=10,padx=10)
 
@@ -211,7 +226,10 @@ class ClientPage(tk.Frame):
 class ServerPage(tk.Frame):
 
     def __init__(self, parent, controller):
+
         tk.Frame.__init__(self, parent)
+        self.controller = controller
+
         label = tk.Label(self, text="Control Center", font=LARGE_FONT)
         label.pack(pady=10,padx=10)
 
@@ -225,22 +243,40 @@ class ServerPage(tk.Frame):
 
 
 class ClientServerUserInput(tk.Frame):
-    # need to error check
-
-    # client_ip_input = None
-    # server_ip_input = None
 
     def __init__(self, parent, controller):
         tk.Frame.__init__(self, parent)
+        self.controller = controller
 
-        text_box_client = tk.Text(self, height=2, width=10)
-        text_box_client.pack()
+        client_frame = tk.Frame(self)
+        server_frame = tk.Frame(self)
+        interface_frame = tk.Frame(self)
+        port_frame = tk.Frame(self)
 
-        text_box_server = tk.Text(self, height=2, width=10)
-        text_box_server.pack()
+        # text_box_client = ttk.Entry(self, height=2, width=10)
+        label_client = tk.Label(self, text="Victim IP Address")
+        label_client.pack(in_=client_frame, side="left")
+        label_server = tk.Label(self, text="Router IP Address")
+        label_server.pack(in_=server_frame, side="left")
+        label_interface = tk.Label(self, text="Interface")
+        label_interface.pack(in_=interface_frame, side="left")
+        label_port = tk.Label(self, text="Port Number")
+        label_port.pack(in_=port_frame, side="left")
+
+        text_box_client = ttk.Entry(self, textvariable=self.controller.shared_data["client_ip"])
+        text_box_client.pack(in_=client_frame, side="right")
+
+        text_box_server = ttk.Entry(self, textvariable=self.controller.shared_data["router_ip"])
+        text_box_server.pack(in_=server_frame, side="right")
+
+        text_box_interface = ttk.Entry(self, textvariable=self.controller.shared_data["interface"])
+        text_box_interface.pack(in_=interface_frame, side="right")
+
+        text_box_port = ttk.Entry(self, textvariable=self.controller.shared_data["port"])
+        text_box_port.pack(in_=port_frame, side="right")
 
         self.client_ip_input = text_box_client
-        self.server_ip_input = text_box_server
+        self.router_ip_input = text_box_server
 
         buttonCommit = ttk.Button(self, text="Submit",
                             command=lambda: self.retrieve_input(controller))
@@ -250,26 +286,48 @@ class ClientServerUserInput(tk.Frame):
                             command=lambda: controller.show_frame(StartPage))
         back_to_origin.pack()
 
+        client_frame.pack(side="top", fill="x")
+        server_frame.pack(side="top", fill="x")
+        interface_frame.pack(side="top", fill="x")
+        port_frame.pack(side="top", fill="x")
+
+
     def retrieve_input(self,controller):
-        client_ip = self.client_ip_input.get("1.0","end-1c")
-        server_ip = self.server_ip_input.get("1.0","end-1c")
-        print(client_ip)
-        print(server_ip)
-        controller.show_frame(GraphPage)
 
+        client_ip = self.client_ip_input.get()
+        router_ip = self.router_ip_input.get()
 
+        ip_regex = re.compile("^\d{1,3}\.\d{1,3}\.\d{1,3}\.\d{1,3}$")
+
+        if ip_regex.match(client_ip) and ip_regex.match(router_ip):
+            controller.show_frame(GraphPage)
+        else:
+            # TODO: add error text
+            print("Enter correct input")
+
+        
 class GraphPage(tk.Frame):
 
     def __init__(self, parent, controller):
+
+        self.controller = controller
+        self.mitm_intstance = None
+        self.synflood_instance = None
+
         tk.Frame.__init__(self, parent)
+
+
         label = tk.Label(self, text="Graph Page!", font=LARGE_FONT)
         label.pack(pady=10,padx=10)
 
-        floodBtn = ttk.Button(self, text="Initiate SYN Flood Attack", command=run_flood_attack)
+        floodBtn = ttk.Button(self, text="Initiate SYN Flood Attack", command=lambda: self.run_flood_attack())
         floodBtn.pack()
 
-        mitmAttackBtn = ttk.Button(self, text="Initiate MITM Attack", command=run_mitm_attack)
+        mitmAttackBtn = ttk.Button(self, text="Initiate MITM Attack", command=lambda: self.run_mitm_attack())
         mitmAttackBtn.pack()
+
+        stop_mitm_attack_btn = ttk.Button(self, text="Stop MITM Attack", command=lambda: self.stop_mitm_attack())
+        stop_mitm_attack_btn.pack()
 
         back_to_origin = ttk.Button(self, text="Back to Origin",
                             command=lambda: controller.show_frame(StartPage))
@@ -299,6 +357,27 @@ class GraphPage(tk.Frame):
         container_graph_client.pack(in_=container_main, side="left")
         container_main.pack(side="top", fill="x")
 
+
+    def run_flood_attack(self):
+      # from attacks import synflood
+        victim_ip = self.controller.shared_data["client_ip"].get()
+        victim_port = self.controller.shared_data["port"].get()
+        # Set as input
+        num_packets = 10000
+
+        self.synflood_instance = SynFlood(victim_ip, victim_port, num_packets)
+        self.synflood_instance.start_attack()
+
+    def run_mitm_attack(self):
+
+        victim = self.controller.shared_data["client_ip"].get()
+        router = self.controller.shared_data["router_ip"].get()
+        interface = self.controller.shared_data["interface"].get()
+        self.mitm_intstance = Mitm(interface, victim, router)
+        self.mitm_intstance.start_attack()
+
+    def stop_mitm_attack(self):
+        self.mitm_intstance.stop_attack()
 
 
 app = PowerGridGui()
