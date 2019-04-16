@@ -11,7 +11,7 @@ from matplotlib.figure import Figure
 import matplotlib.animation as animation
 from matplotlib import style
 import os
-import subprocess 
+import subprocess
 import signal
 from helper_functions import start_client, start_server, start_packet_tracker
 import re
@@ -97,17 +97,26 @@ class LivePlot(tk.Frame):
         labelDir=tk.Label(self, textvariable=labelText,height=2)
         labelDir.pack()
 
-        interface=tk.StringVar(None)
-        self.interfacename=tk.Entry(self,textvariable=interface,width=20)
+        self.interface=tk.StringVar(None)
+        self.interfacename=tk.Entry(self,textvariable=self.interface,width=20)
         self.interfacename.pack()
 
+
+
         buttonCommit = ttk.Button(self, text="Submit",
-                            command=lambda: start_packet_tracker(self.interfacename.get()))
+                            command=lambda: self.check_entry())
         buttonCommit.pack()
 
         back_to_origin = ttk.Button(self, text="Back to Origin",
                             command=lambda: controller.show_frame(StartPage))
         back_to_origin.pack()
+
+    def check_entry(self):
+        if not self.interface.get():
+            self.interfacename.configure(highlightbackground="red", highlightcolor="red")
+
+        else:
+            start_packet_tracker(self.interfacename.get())
 
 class ClientPage(tk.Frame):
 
@@ -227,7 +236,7 @@ class ClientServerUserInput(tk.Frame):
             # TODO: add error text
             print("Enter correct input")
 
-        
+
 class AttackerDashboard(tk.Frame):
 
     def __init__(self, parent, controller):
