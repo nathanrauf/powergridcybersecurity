@@ -5,6 +5,7 @@ import os
 import sys
 import random
 
+# used https://github.com/EmreOvunc/Python-SYN-Flood-Attack-Tool/blob/master/SYN-Flood.py for assistance on how to write such attack
 
 class SynFlood():
 
