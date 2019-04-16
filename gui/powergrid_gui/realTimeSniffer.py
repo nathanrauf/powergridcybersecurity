@@ -1,10 +1,15 @@
 from scapy.all import *
-import tkinter
-from matplotlib.backends.backend_tkagg import FigureCanvasTkAgg, NavigationToolbar2Tk
+import Tkinter as tkinter
+import os
+import matplotlib
+matplotlib.use("TKAgg")
+from matplotlib.backends.backend_tkagg import FigureCanvasTkAgg, NavigationToolbar2Tk as FigureCanvas
 import matplotlib.pyplot as plt
 import argparse
 import operator
 from os import getuid
+# The code for changing pages was derived from: http://stackoverflow.com/questions/7546050/switch-between-two-frames-in-tkinter
+# License: http://creativecommons.org/licenses/by-sa/3.0/
 
 parser = argparse.ArgumentParser(description='Client/Server Live Traffic')
 
@@ -43,10 +48,12 @@ else:
    print("Capturing unlimited packets on interface {} \n--Press CTRL-C to exit ".format(args.interface))
 
 #Interactive Mode
-
-plt.ion()
+#
+# plt.ioff()
 
 #Labels
+
+#fig = plt.figure(1)
 
 plt.ylabel("Packets received")
 
@@ -67,13 +74,16 @@ yData1=[]
 xData = []
 
 #___________________________tkinter________________________
-fig = plt.figure(1)
+#Make a panel
+# ax = fig.subplots()
+# fig = Figure(figsize=(5,4), dpi=100)
+# fig.add_subplot(111)
+fig = plt.figure()
+ax1 = plt.subplot()
 root = tkinter.Tk()
 root.title("Interface Packets Received over Time")
 canvas = FigureCanvasTkAgg(fig, master=root)  # A tk.DrawingArea.
-canvas.draw()
 canvas.get_tk_widget().pack(side=tkinter.TOP, fill=tkinter.BOTH, expand=1)
-
 T = tkinter.Text(root)
 T.pack()
 
@@ -95,7 +105,7 @@ while True:
 
                if (str(pkt[IP].src)) in seenIPs:
                     #Get current value and add 1
-                     T.insert(tkinter.END,
+                    T.insert(tkinter.END,
                             "Packet Source: " + str(pkt[IP].src) + " || Packet Dest: " + str(pkt[IP].dst) + "\n")
                     count = srcCounts.get(str(pkt[IP].src))
                     count = count + 1
@@ -104,16 +114,16 @@ while True:
                     #Add to freq map
                     srcCounts.update({str(pkt[IP].src) : 1})
                     #Add to seen seenIPs
+
                     print(str(pkt[IP].src))
                     seenIPs.append(str(pkt[IP].src))
                     T.insert(tkinter.END, "Packet Source: " + str(pkt[IP].src) + " || Packet Dest: " + str(pkt[IP].dst) + "\n")
                # Get max of current source IP addresses
                yData.append(max(srcCounts.iteritems(), key=operator.itemgetter(1))[1])
-               plt.plot(yData)
+               ax1.plot(yData)
 
                #Pause and draw
-
-               plt.pause(0.1)
+               canvas.draw()
 
                i+=1
 

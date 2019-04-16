@@ -14,12 +14,5 @@ def start_server():
 
 def start_packet_tracker(interface):
    print("Starting live packet viewer")
-   command = ['python', 'realTimeSniffer.py', interface]
+   command = ['python2.7', 'realTimeSniffer.py', interface]
    subprocess.Popen(command)
-
-
-
-
-
-
-
